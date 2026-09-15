@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Empêche le zoom et gère l'encoche de l'iPhone (safe-area) -->
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <!-- Déclare l'app comme une Web App iOS (Plein écran) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JunoLoc">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #007aff;
+            --bg: #f2f2f7;
+            --card: #ffffff;
+            --text: #1c1c1e;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 16px;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            background: var(--card);
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            color: #8e8e93;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: none;
+            font-size: 16px;
+            background: transparent;
+            outline: none;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn-save {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            background: #e5f0ff;
+            color: #004085;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Détails de l'annonce ✏️</h1>
+    <div id="info-message" class="info-box" style="display:none;">Extraction automatique en cours...</div>
+
+    <form id="annonce-form" onsubmit="sauvegarder(event)">
+        <div class="form-group">
+            <label>Loyer (€)</label>
+            <input type="number" id="loyer" step="0.01">
+        </div>
+        <div class="form-group">
+            <label>Surface (m²)</label>
+            <input type="number" id="surface" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Localisation (Code postal ou Ville)</label>
+            <input type="text" id="localisation">
+        </div>
+        <div class="form-group">
+            <label>Lien de l'image (Optionnel)</label>
+            <input type="url" id="image_url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+            <label>Statut</label>
+            <select id="statut">
+                <option value="À contacter">À contacter</option>
+                <option value="Dossier envoyé">Dossier envoyé</option>
+                <option value="Visite prévue">Visite prévue</option>
+                <option value="Refusé">Refusé</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Commentaires / Notes partagées</label>
+            <textarea id="commentaires" placeholder="Ex: Appeler après 18h..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-save">Valider et Retourner à l'accueil</button>
+    </form>
+
+    <script>
+        const supabaseUrl = 'TON_URL_SUPABASE';
+        const supabaseKey = 'TA_CLE_ANON';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Récupère l'ID de l'annonce dans l'URL (ex: annonce.html?id=123)
+        const urlParams = new URLSearchParams(window.location.search);
+        const annonceId = urlParams.get('id');
+
+        // Regex pour l'extraction
+        function analyserTexte(texte) {
+            const prixMatch = texte.match(/(\d[\d\s]*)\s*(?:€|euros|CC|HC)/i);
+            const surfaceMatch = texte.match(/(\d[\d,.]*)\s*(?:m2|m²|mètres)/i);
+            const cpMatch = texte.match(/\b([0-9]{5})\b/);
+
+            return {
+                loyer: prixMatch ? parseFloat(prixMatch[1].replace(/\s/g, '')) : '',
+                surface: surfaceMatch ? parseFloat(surfaceMatch[1].replace(',', '.')) : '',
+                localisation: cpMatch ? cpMatch[1] : ''
+            };
+        }
+
+        async function chargerDonnees() {
+            if (!annonceId) return alert("Aucun identifiant d'annonce trouvé.");
+
+            const { data, error } = await supabase.from('annonces').select('*').eq('id', annonceId).single();
+            if (error) return console.error(error);
+
+            // Si le loyer est vide mais qu'on a du texte brut, on lance l'analyse automatique
+            if (!data.loyer && data.texte_brut) {
+                document.getElementById('info-message').style.display = 'block';
+                document.getElementById('info-message').innerText = 'Données pré-remplies automatiquement à partir du texte !';
+
+                const extractions = analyserTexte(data.texte_brut);
+                document.getElementById('loyer').value = extractions.loyer;
+                document.getElementById('surface').value = extractions.surface;
+                document.getElementById('localisation').value = data.localisation || extractions.localisation;
+            } else {
+                // Sinon on remplit avec ce qui est déjà en base
+                document.getElementById('loyer').value = data.loyer || '';
+                document.getElementById('surface').value = data.surface || '';
+                document.getElementById('localisation').value = data.localisation || '';
+            }
+
+            document.getElementById('image_url').value = data.image_url || '';
+            document.getElementById('statut').value = data.statut || 'À contacter';
+            document.getElementById('commentaires').value = data.commentaires || '';
+        }
+
+        window.sauvegarder = async function (event) {
+            event.preventDefault(); // Empêche le rechargement de la page
+
+            const updates = {
+                loyer: document.getElementById('loyer').value || null,
+                surface: document.getElementById('surface').value || null,
+                localisation: document.getElementById('localisation').value,
+                image_url: document.getElementById('image_url').value,
+                statut: document.getElementById('statut').value,
+                commentaires: document.getElementById('commentaires').value
+            };
+
+            const { error } = await supabase.from('annonces').update(updates).eq('id', annonceId);
+
+            if (error) {
+                alert("Erreur lors de la sauvegarde !");
+                console.error(error);
+            } else {
+                window.location.href = 'index.html'; // Retour au dashboard
+            }
+        };
+
+        chargerDonnees();
+    </script>
+</body>
+
+</html>
