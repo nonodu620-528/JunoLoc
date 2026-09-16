@@ -126,7 +126,7 @@
             <textarea id="commentaires" placeholder="Ex: Appeler après 18h..."></textarea>
         </div>
 
-        <button type="submit" class="btn-save">Valider et Retourner à l'accueil</button>
+        <button type="button" class="btn-save" onclick="sauvegarder(event)">Valider l'annonce</button>
     </form>
 
     <script>
@@ -156,10 +156,19 @@
         }
 
         async function chargerDonnees() {
-            if (!annonceId) return alert("Aucun identifiant d'annonce trouvé.");
+            if (!annonceId) {
+                document.getElementById('info-message').style.display = 'block';
+                document.getElementById('info-message').innerText = "Erreur: Aucun identifiant d'annonce trouvé dans l'URL.";
+                return;
+            }
 
             const { data, error } = await supabase.from('annonces').select('*').eq('id', annonceId).single();
-            if (error) return console.error(error);
+            if (error || !data) {
+                document.getElementById('info-message').style.display = 'block';
+                document.getElementById('info-message').innerText = "Erreur: Annonce introuvable ou bloquée par la base de données.";
+                console.error("Supabase Error:", error);
+                return;
+            }
 
             // Si le loyer est vide mais qu'on a du texte brut, on lance l'analyse automatique
             if (!data.loyer && data.texte_brut) {
@@ -212,17 +221,30 @@
                 btn.innerText = "Sauvegardé !";
                 btn.style.background = "#34c759"; // Vert succès iOS
                 
-                // On informe l'utilisateur et on tente de fermer l'onglet
+                // On informe l'utilisateur
                 document.getElementById('info-message').style.display = 'block';
                 document.getElementById('info-message').style.background = '#e5fceb';
                 document.getElementById('info-message').style.color = '#00661e';
-                document.getElementById('info-message').innerHTML = '✅ Annonce sauvegardée avec succès.<br><b>Vous pouvez maintenant fermer cet onglet et retourner sur votre application.</b>';
+                document.getElementById('info-message').innerHTML = '✅ Annonce sauvegardée avec succès.<br>Redirection en cours...';
                 
-                // Sur iOS, window.close() peut être bloqué s'il n'est pas le résultat direct d'un clic, 
-                // mais on essaie car on est dans le thread du submit.
+                // On récupère le lien d'origine pour tenter un retour vers l'app native
+                const { data: currentData } = await supabase.from('annonces').select('lien').eq('id', annonceId).single();
+                const lien = currentData?.lien || '';
+
                 setTimeout(() => {
-                    window.close();
-                }, 500);
+                    // Si on vient de Leboncoin
+                    if (lien.includes('leboncoin.fr')) {
+                        window.location.href = 'leboncoin://';
+                    } 
+                    // Si on vient de SeLoger
+                    else if (lien.includes('seloger.com')) {
+                        window.location.href = 'seloger://';
+                    } 
+                    // Sinon, redirection vers le Dashboard
+                    else {
+                        window.location.href = 'index.html';
+                    }
+                }, 800);
             }
         };
 

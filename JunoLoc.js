@@ -15,7 +15,17 @@ async function chargerAnnonces() {
 
     if (error) {
         console.error("Erreur de chargement", error);
-        conteneurAnnonces.innerHTML = "Erreur de chargement.";
+        conteneurAnnonces.innerHTML = "<div style='padding:20px; text-align:center; color:red;'>Erreur de chargement de la base de données. Vérifiez les permissions.</div>";
+        return;
+    }
+
+    if (!annonces || annonces.length === 0) {
+        conteneurAnnonces.innerHTML = `
+            <div style="text-align:center; padding: 40px 20px; color: #8e8e93;">
+                <h2>Aucune annonce</h2>
+                <p>Vos annonces apparaîtront ici après les avoir partagées depuis LeBonCoin ou SeLoger.</p>
+            </div>
+        `;
         return;
     }
 
