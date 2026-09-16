@@ -1,6 +1,6 @@
 // Initialisation de Supabase
 const supabaseUrl = 'https://hqujoqvlpzdzmtiuwmqm.supabase.co';
-const supabaseKey = 'TeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxdWpvcXZscHpkem10aXV3bXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjQ3ODYsImV4cCI6MjEwNTA0MDc4Nn0.R_jpqTxf8nSm6aDXVkCNRwydPvP8Zfpc9Rlvo3q64Og';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxdWpvcXZscHpkem10aXV3bXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjQ3ODYsImV4cCI6MjEwNTA0MDc4Nn0.R_jpqTxf8nSm6aDXVkCNRwydPvP8Zfpc9Rlvo3q64Og';
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 const conteneurAnnonces = document.getElementById('liste-annonces');
@@ -33,7 +33,7 @@ async function chargerAnnonces() {
 
     annonces.forEach(annonce => {
         const estContacte = annonce.statut && annonce.statut !== 'À contacter';
-        
+
         const div = document.createElement('div');
         div.className = 'annonce-card';
         div.innerHTML = `
