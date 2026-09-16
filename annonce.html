@@ -130,25 +130,29 @@
     </form>
 
     <script>
-        const supabaseUrl = 'TON_URL_SUPABASE';
-        const supabaseKey = 'TA_CLE_ANON';
+        const supabaseUrl = 'https://hqujoqvlpzdzmtiuwmqm.supabase.co';
+        const supabaseKey = 'TeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxdWpvcXZscHpkem10aXV3bXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjQ3ODYsImV4cCI6MjEwNTA0MDc4Nn0.R_jpqTxf8nSm6aDXVkCNRwydPvP8Zfpc9Rlvo3q64Og';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Récupère l'ID de l'annonce dans l'URL (ex: annonce.html?id=123)
         const urlParams = new URLSearchParams(window.location.search);
         const annonceId = urlParams.get('id');
 
-        // Regex pour l'extraction
-        function analyserTexte(texte) {
-            const prixMatch = texte.match(/(\d[\d\s]*)\s*(?:€|euros|CC|HC)/i);
-            const surfaceMatch = texte.match(/(\d[\d,.]*)\s*(?:m2|m²|mètres)/i);
-            const cpMatch = texte.match(/\b([0-9]{5})\b/);
-
-            return {
-                loyer: prixMatch ? parseFloat(prixMatch[1].replace(/\s/g, '')) : '',
-                surface: surfaceMatch ? parseFloat(surfaceMatch[1].replace(',', '.')) : '',
-                localisation: cpMatch ? cpMatch[1] : ''
-            };
+        // Extraction intelligente (Préparation pour l'IA)
+        async function extraireDonneesIntelligemment(texte) {
+            // TODO: Intégrer ici l'appel à une API IA (ex: OpenAI) pour extraire toutes les données structurées.
+            // Actuellement, fallback sur une extraction Regex basique.
+            return new Promise((resolve) => {
+                const prixMatch = texte.match(/(\d[\d\s]*)\s*(?:€|euros|CC|HC)/i);
+                const surfaceMatch = texte.match(/(\d[\d,.]*)\s*(?:m2|m²|mètres)/i);
+                const cpMatch = texte.match(/\b([0-9]{5})\b/);
+                
+                resolve({
+                    loyer: prixMatch ? parseFloat(prixMatch[1].replace(/\s/g, '')) : '',
+                    surface: surfaceMatch ? parseFloat(surfaceMatch[1].replace(',', '.')) : '',
+                    localisation: cpMatch ? cpMatch[1] : ''
+                });
+            });
         }
 
         async function chargerDonnees() {
@@ -162,7 +166,7 @@
                 document.getElementById('info-message').style.display = 'block';
                 document.getElementById('info-message').innerText = 'Données pré-remplies automatiquement à partir du texte !';
 
-                const extractions = analyserTexte(data.texte_brut);
+                const extractions = await extraireDonneesIntelligemment(data.texte_brut);
                 document.getElementById('loyer').value = extractions.loyer;
                 document.getElementById('surface').value = extractions.surface;
                 document.getElementById('localisation').value = data.localisation || extractions.localisation;
@@ -181,6 +185,12 @@
         window.sauvegarder = async function (event) {
             event.preventDefault(); // Empêche le rechargement de la page
 
+            // Afficher le chargement
+            const btn = document.querySelector('.btn-save');
+            const originalText = btn.innerText;
+            btn.innerText = "Sauvegarde en cours...";
+            btn.disabled = true;
+
             const updates = {
                 loyer: document.getElementById('loyer').value || null,
                 surface: document.getElementById('surface').value || null,
@@ -195,8 +205,24 @@
             if (error) {
                 alert("Erreur lors de la sauvegarde !");
                 console.error(error);
+                btn.innerText = originalText;
+                btn.disabled = false;
             } else {
-                window.location.href = 'index.html'; // Retour au dashboard
+                // Succès de la sauvegarde
+                btn.innerText = "Sauvegardé !";
+                btn.style.background = "#34c759"; // Vert succès iOS
+                
+                // On informe l'utilisateur et on tente de fermer l'onglet
+                document.getElementById('info-message').style.display = 'block';
+                document.getElementById('info-message').style.background = '#e5fceb';
+                document.getElementById('info-message').style.color = '#00661e';
+                document.getElementById('info-message').innerHTML = '✅ Annonce sauvegardée avec succès.<br><b>Vous pouvez maintenant fermer cet onglet et retourner sur votre application.</b>';
+                
+                // Sur iOS, window.close() peut être bloqué s'il n'est pas le résultat direct d'un clic, 
+                // mais on essaie car on est dans le thread du submit.
+                setTimeout(() => {
+                    window.close();
+                }, 500);
             }
         };
 

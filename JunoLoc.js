@@ -22,26 +22,43 @@ async function chargerAnnonces() {
     conteneurAnnonces.innerHTML = '';
 
     annonces.forEach(annonce => {
+        const estContacte = annonce.statut && annonce.statut !== 'À contacter';
+        
         const div = document.createElement('div');
-        div.className = `annonce ${annonce.est_contacte ? 'contacte' : ''}`;
-
+        div.className = 'annonce-card';
         div.innerHTML = `
-            <h3>${annonce.localisation || 'Localisation inconnue'} - ${annonce.loyer} €</h3>
-            <p><a href="${annonce.lien}" target="_blank">Voir l'annonce originale</a></p>
-            <label>
-                <input type="checkbox" onchange="changerStatut('${annonce.id}', this.checked)" ${annonce.est_contacte ? 'checked' : ''}>
-                Déjà contacté
-            </label>
+            ${annonce.image_url ? `<img src="${annonce.image_url}" class="image-preview" alt="Photo">` : `<div class="image-preview" style="display:flex;align-items:center;justify-content:center;color:#8e8e93;">Aucune image</div>`}
+            <div class="card-content">
+                <div class="annonce-header">
+                    <h3 class="titre">${annonce.titre || annonce.localisation || 'Bien sans titre'}</h3>
+                    <p class="prix">${annonce.loyer ? annonce.loyer + ' €' : 'Prix non renseigné'}</p>
+                    ${annonce.surface ? `<p style="font-size:14px; color:#8e8e93; margin:4px 0 0 0;">${annonce.surface} m²</p>` : ''}
+                </div>
+                
+                <div class="status-toggle">
+                    <label style="display:flex; align-items:center;">
+                        <input type="checkbox" onchange="changerStatut('${annonce.id}', this.checked)" ${estContacte ? 'checked' : ''}>
+                        Contacté
+                    </label>
+                    <span style="font-size:13px; color:#8e8e93;">${annonce.statut || 'À contacter'}</span>
+                </div>
+                
+                <div class="actions">
+                    <a href="${annonce.lien}" target="_blank" class="btn btn-outline">Voir l'annonce</a>
+                    <a href="annonce.html?id=${annonce.id}" class="btn btn-primary">Éditer</a>
+                </div>
+            </div>
         `;
         conteneurAnnonces.appendChild(div);
     });
 }
 
 // Fonction pour mettre à jour le statut dans la base
-window.changerStatut = async function (id, statut) {
+window.changerStatut = async function (id, isChecked) {
+    const nouveauStatut = isChecked ? 'Dossier envoyé' : 'À contacter';
     const { error } = await supabase
         .from('annonces')
-        .update({ est_contacte: statut })
+        .update({ statut: nouveauStatut })
         .eq('id', id);
 
     if (error) console.error("Erreur de mise à jour", error);
