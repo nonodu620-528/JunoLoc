@@ -192,59 +192,71 @@
         }
 
         window.sauvegarder = async function (event) {
-            event.preventDefault(); // Empêche le rechargement de la page
+            try {
+                if (event) event.preventDefault(); // Empêche le rechargement de la page
 
-            // Afficher le chargement
-            const btn = document.querySelector('.btn-save');
-            const originalText = btn.innerText;
-            btn.innerText = "Sauvegarde en cours...";
-            btn.disabled = true;
+                // Afficher le chargement
+                const btn = document.querySelector('.btn-save');
+                const originalText = btn.innerText;
+                btn.innerText = "Sauvegarde en cours...";
+                btn.disabled = true;
 
-            const updates = {
-                loyer: document.getElementById('loyer').value || null,
-                surface: document.getElementById('surface').value || null,
-                localisation: document.getElementById('localisation').value,
-                image_url: document.getElementById('image_url').value,
-                statut: document.getElementById('statut').value,
-                commentaires: document.getElementById('commentaires').value
-            };
+                if (!annonceId) {
+                    alert("Impossible de sauvegarder : aucun ID d'annonce. Le raccourci iOS n'a probablement pas réussi à insérer l'annonce dans Supabase.");
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    return;
+                }
 
-            const { error } = await supabase.from('annonces').update(updates).eq('id', annonceId);
+                const updates = {
+                    loyer: document.getElementById('loyer').value || null,
+                    surface: document.getElementById('surface').value || null,
+                    localisation: document.getElementById('localisation').value,
+                    image_url: document.getElementById('image_url').value,
+                    statut: document.getElementById('statut').value,
+                    commentaires: document.getElementById('commentaires').value
+                };
 
-            if (error) {
-                alert("Erreur lors de la sauvegarde !");
-                console.error(error);
-                btn.innerText = originalText;
-                btn.disabled = false;
-            } else {
-                // Succès de la sauvegarde
-                btn.innerText = "Sauvegardé !";
-                btn.style.background = "#34c759"; // Vert succès iOS
-                
-                // On informe l'utilisateur
-                document.getElementById('info-message').style.display = 'block';
-                document.getElementById('info-message').style.background = '#e5fceb';
-                document.getElementById('info-message').style.color = '#00661e';
-                document.getElementById('info-message').innerHTML = '✅ Annonce sauvegardée avec succès.<br>Redirection en cours...';
-                
-                // On récupère le lien d'origine pour tenter un retour vers l'app native
-                const { data: currentData } = await supabase.from('annonces').select('lien').eq('id', annonceId).single();
-                const lien = currentData?.lien || '';
+                const { error } = await supabase.from('annonces').update(updates).eq('id', annonceId);
 
-                setTimeout(() => {
-                    // Si on vient de Leboncoin
-                    if (lien.includes('leboncoin.fr')) {
-                        window.location.href = 'leboncoin://';
-                    } 
-                    // Si on vient de SeLoger
-                    else if (lien.includes('seloger.com')) {
-                        window.location.href = 'seloger://';
-                    } 
-                    // Sinon, redirection vers le Dashboard
-                    else {
-                        window.location.href = 'index.html';
-                    }
-                }, 800);
+                if (error) {
+                    alert("Erreur Supabase lors de la sauvegarde ! " + error.message);
+                    console.error(error);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                } else {
+                    // Succès de la sauvegarde
+                    btn.innerText = "Sauvegardé !";
+                    btn.style.background = "#34c759"; // Vert succès iOS
+                    
+                    // On informe l'utilisateur
+                    document.getElementById('info-message').style.display = 'block';
+                    document.getElementById('info-message').style.background = '#e5fceb';
+                    document.getElementById('info-message').style.color = '#00661e';
+                    document.getElementById('info-message').innerHTML = '✅ Annonce sauvegardée avec succès.<br>Redirection en cours...';
+                    
+                    // On récupère le lien d'origine pour tenter un retour vers l'app native
+                    const { data: currentData } = await supabase.from('annonces').select('lien').eq('id', annonceId).single();
+                    const lien = currentData?.lien || '';
+
+                    setTimeout(() => {
+                        if (lien.includes('leboncoin.fr')) {
+                            window.location.href = 'leboncoin://';
+                        } else if (lien.includes('seloger.com')) {
+                            window.location.href = 'seloger://';
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    }, 800);
+                }
+            } catch (err) {
+                alert("Erreur JavaScript inattendue : " + err.message);
+                console.error(err);
+                const btn = document.querySelector('.btn-save');
+                if (btn) {
+                    btn.innerText = "Erreur !";
+                    btn.disabled = false;
+                }
             }
         };
 
