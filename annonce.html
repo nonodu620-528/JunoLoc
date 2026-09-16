@@ -195,15 +195,20 @@
             try {
                 if (event) event.preventDefault(); // Empêche le rechargement de la page
 
-                // Afficher le chargement
+                const infoBox = document.getElementById('info-message');
                 const btn = document.querySelector('.btn-save');
                 const originalText = btn.innerText;
+
+                // Afficher le chargement
                 btn.innerText = "Sauvegarde en cours...";
                 btn.disabled = true;
 
                 if (!annonceId) {
-                    alert("Impossible de sauvegarder : aucun ID d'annonce. Le raccourci iOS n'a probablement pas réussi à insérer l'annonce dans Supabase.");
-                    btn.innerText = originalText;
+                    infoBox.style.display = 'block';
+                    infoBox.style.background = '#ffe5e5';
+                    infoBox.style.color = '#cc0000';
+                    infoBox.innerHTML = "❌ Impossible de sauvegarder : aucun ID valide. Le raccourci iOS n'a probablement pas réussi à insérer l'annonce dans Supabase (Vérifiez la clé API dans votre Raccourci iOS !).";
+                    btn.innerText = "Erreur";
                     btn.disabled = false;
                     return;
                 }
@@ -220,20 +225,22 @@
                 const { error } = await supabase.from('annonces').update(updates).eq('id', annonceId);
 
                 if (error) {
-                    alert("Erreur Supabase lors de la sauvegarde ! " + error.message);
+                    infoBox.style.display = 'block';
+                    infoBox.style.background = '#ffe5e5';
+                    infoBox.style.color = '#cc0000';
+                    infoBox.innerHTML = "❌ Erreur Supabase lors de la sauvegarde : " + error.message;
                     console.error(error);
-                    btn.innerText = originalText;
+                    btn.innerText = "Erreur";
                     btn.disabled = false;
                 } else {
                     // Succès de la sauvegarde
                     btn.innerText = "Sauvegardé !";
                     btn.style.background = "#34c759"; // Vert succès iOS
                     
-                    // On informe l'utilisateur
-                    document.getElementById('info-message').style.display = 'block';
-                    document.getElementById('info-message').style.background = '#e5fceb';
-                    document.getElementById('info-message').style.color = '#00661e';
-                    document.getElementById('info-message').innerHTML = '✅ Annonce sauvegardée avec succès.<br>Redirection en cours...';
+                    infoBox.style.display = 'block';
+                    infoBox.style.background = '#e5fceb';
+                    infoBox.style.color = '#00661e';
+                    infoBox.innerHTML = '✅ Annonce sauvegardée avec succès.<br>Redirection en cours...';
                     
                     // On récupère le lien d'origine pour tenter un retour vers l'app native
                     const { data: currentData } = await supabase.from('annonces').select('lien').eq('id', annonceId).single();
@@ -250,8 +257,13 @@
                     }, 800);
                 }
             } catch (err) {
-                alert("Erreur JavaScript inattendue : " + err.message);
+                const infoBox = document.getElementById('info-message');
+                infoBox.style.display = 'block';
+                infoBox.style.background = '#ffe5e5';
+                infoBox.style.color = '#cc0000';
+                infoBox.innerHTML = "❌ Erreur JS inattendue : " + err.message;
                 console.error(err);
+                
                 const btn = document.querySelector('.btn-save');
                 if (btn) {
                     btn.innerText = "Erreur !";
